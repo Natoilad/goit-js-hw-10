@@ -1,76 +1,68 @@
 import './css/styles.css';
-import { fetchCountries } from './fetchCountries.js';
+import { fetchCountries } from './js/fetchCountries.js';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
-var debounce = require('lodash.debounce');
+import debounce from 'lodash.debounce';
 
 const DEBOUNCE_DELAY = 300;
 
-const refs = {
-  input: document.querySelector('#search-box'),
-  list: document.querySelector('.country-list'),
-  info: document.querySelector('.country-info'),
-};
+const searchCountry = document.getElementById('search-box');
+const listCountry = document.querySelector('.country-list');
+const infoCountry = document.querySelector('.country-info');
 
-refs.input.addEventListener('input', debounce(onInputName, DEBOUNCE_DELAY));
-
-function onInputName(evt) {
-  const name = evt.target.value.trim();
-
-  if (!name) {
-    refs.list.innerHTML = '';
+const markupReset = link => (link.innerHTML = '');
+const handlerInput = e => {
+  const inputCountry = e.target.value.trim();
+  if (!inputCountry) {
+    markupReset(listCountry);
+    markupReset(infoCountry);
     return;
   }
-
-  fetchCountries(name)
+  fetchCountries(inputCountry)
     .then(data => {
-      // console.dir(data);
-      if (data.length > 20) {
+      console.log(data);
+      if (data.length > 10) {
         Notify.info(
-          'Too many matches found. Please enter a more specific name.'
+          'Too many matches found. Please enter a more specific name'
         );
-      } else if (data.length === 1) {
-        // console.log('длинна', data.length);
-        createMarkupCountrie(data);
-      } else {
-        // console.log('длинна', data.length);
-        createMarkupCountries(data);
+        return;
       }
+      createMarkup(data);
     })
-    .catch(createErrorMessage);
-}
-
-function createMarkupCountrie(data) {
-  const {
-    flags: { svg },
-    name,
-    capital,
-    population,
-    languages
-  } = data[0];
-  const langs = languages.map(element => element.name);
-  const markup = `<img src="${svg}" alt="${name}" width="30">
-    <span style="font-size: 35px;font-weight: 700">${name}</span>
-    <p><b>Capital: </b>${capital}</p>
-      <p><b>Population: </b>${population}</p>
-      <p><b>Languages: </b>${langs.join(', ')}</p>`;
-  refs.list.innerHTML = '';
-  refs.info.innerHTML = markup;
-}
-
-function createMarkupCountries(data) {
-  const markup = data.map(
-    ({ flags: { svg }, name }) => `<li>
-    <img src="${svg}" alt="${name}" width="30">
-    <span>${name}</span>    
-    </li>`
+    .catch(error => {
+      markupReset(listCountry);
+      markupReset(infoCountry);
+      Notify.failure('Oops, there is no country with that name');
+    });
+};
+const createMarkup = data => {
+  if (data.length === 1) {
+    markupReset(listCountry);
+    const markupInfoCountry = createMarkupInfo(data);
+    infoCountry.innerHTML = markupInfoCountry;
+  } else {
+    markupReset(infoCountry);
+    const markupListCountry = createMarkupList(data);
+    listCountry.innerHTML = markupListCountry;
+  }
+};
+const createMarkupList = data => {
+  return data
+    .map(
+      ({ name: { official }, flags: { svg } }) =>
+        `<p><img src="${svg}" alt="${official}" width="30" height="20"> ${official}</p>`
+    )
+    .join('');
+};
+const createMarkupInfo = data => {
+  return data.map(
+    ({ name, capital, population, flags, languages }) =>
+      `<h1><img src="${flags.png}" alt=" ${
+        name.official
+      }" width="30" height="20">${name.official}</h1>
+      <p>Capital: ${capital}</p>
+      <p>Population: ${population}</p>
+      <p>Languages: ${Object.values(languages)}</p>`
   );
-  refs.info.innerHTML = '';
-  refs.list.innerHTML = markup.join('');
-}
+};
 
-function createErrorMessage(err) {
-  refs.list.innerHTML = '';
-  refs.info.innerHTML = '';
-  // refs.input.value = ""
-  Notify.failure(`Oops, there is no country with that name`);
-}
+searchCountry.addEventListener('input', debounce(handlerInput, DEBOUNCE_DELAY));
