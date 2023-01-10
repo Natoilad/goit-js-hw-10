@@ -8,57 +8,50 @@ const DEBOUNCE_DELAY = 300;
 const searchCountry = document.getElementById('search-box');
 const listCountry = document.querySelector('.country-list');
 const infoCountry = document.querySelector('.country-info');
-
-const markupReset = link => (link.innerHTML = '');
-const handlerInput = e => {
-  const inputCountry = e.target.value.trim();
-  if (!inputCountry) {
-    markupReset(listCountry);
-    markupReset(infoCountry);
+const createMarkupCheck = data => {
+  if (data.length > 10) {
+    Notify.info('Too many matches found. Please enter a more specific name');
     return;
-  }
-  fetchCountries(inputCountry)
-    .then(data => {
-      console.log(data);
-      if (data.length > 10) {
-        Notify.info(
-          'Too many matches found. Please enter a more specific name'
-        );
-        return;
-      }
-      createMarkup(data);
-    })
-    .catch(error => {
-      markupReset(listCountry);
-      markupReset(infoCountry);
-      Notify.failure('Oops, there is no country with that name');
-    });
-};
-const createMarkup = data => {
-  if (data.length === 1) {
+  } else if (data.length === 1) {
     markupReset(listCountry);
     const markupInfoCountry = createMarkupInfo(data);
     infoCountry.innerHTML = markupInfoCountry;
+    return;
   } else {
     markupReset(infoCountry);
     const markupListCountry = createMarkupList(data);
     listCountry.innerHTML = markupListCountry;
   }
 };
+const markupReset = link => (link.innerHTML = '');
+const handlerInput = e => {
+  const inputCountry = e.target.value.trim();
+  markupReset(listCountry);
+  markupReset(infoCountry);
+  if (!inputCountry) {
+    return;
+  }
+  fetchCountries(inputCountry)
+    .then(data => {
+      createMarkupCheck(data);
+    })
+    .catch(error => {
+      Notify.failure('Oops, there is no country with that name');
+    });
+};
+
 const createMarkupList = data => {
   return data
     .map(
       ({ name: { official }, flags: { svg } }) =>
-        `<p><img src="${svg}" alt="${official}" width="30" height="20"> ${official}</p>`
+        `<p><img src="${svg}" alt="${official}" width="40" height="30"> ${official}</p>`
     )
     .join('');
 };
 const createMarkupInfo = data => {
   return data.map(
-    ({ name, capital, population, flags, languages }) =>
-      `<h1><img src="${flags.png}" alt=" ${
-        name.official
-      }" width="30" height="20">${name.official}</h1>
+    ({ name: { official }, capital, population, flags: { svg }, languages }) =>
+      `<h1><img src="${svg}" alt="${official}" width="40" height="30"> ${official}</h1>
       <p>Capital: ${capital}</p>
       <p>Population: ${population}</p>
       <p>Languages: ${Object.values(languages)}</p>`
